@@ -1,6 +1,7 @@
 # ndumornay.github.io
 
 by Nathalie Dumornay
+
 completed 9/27/17
 
 # Implementation
