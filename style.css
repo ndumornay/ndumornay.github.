@@ -1,20 +1,22 @@
 /* Style sheet for index and bio pages */
 body {
 	font-family: Helvetica,Arial,sans-serif;
-	background-color: silver;
-	text-align: center;
+	background-color: gainsboro;
+}
+
+#index {
+		text-align: center;
 }
 
 h1 {
 	font-size: 48px;
-	/*background-color: yellow;
-	border-style: dashed;
-	padding-top: 50px;
-	padding-bottom: 50px;
-	margin-left: 20%;
-	margin-right: 20%;*/
 }
 
 h3 {
 	font-size: 20px;	
+}
+
+#bio {
+	margin-left: 5%;
+	margin-right: 5%;
 }
