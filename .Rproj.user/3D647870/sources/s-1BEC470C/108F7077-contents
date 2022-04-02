@@ -14,21 +14,22 @@ library(htmltools)
 
 <!-- ## Nathalie M. Dumornay, B.S. | Graduate Student -->
 
-:::: {style="display: flex;"}
+:::: {style="display: flex;align-items: center;"}
 
 ::: {}
-<img src="images/me.png" style="width:80%">
+### about me 🧠
+
+Welcome to my website! I am a graduate student interested in childhood adversity/early life stress and its effects on brain development. I am also a lover of music and superhero movies.
+
 :::
 ::: {}
-### about me
-
-Welcome to my website! I am a graduate student interested in childhood adversity/early life stress and its effects on 🧠development. I am also a lover of music and superhero movies. 
+<img src="images/me.png" style="width:75%">
 :::
-
-:::
-
 ::: {}
 ```{r, echo=FALSE}
 includeHTML("twitter-feed.html")
 ```
 :::
+
+:::
+

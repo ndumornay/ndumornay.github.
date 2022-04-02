@@ -10,7 +10,7 @@ a {
 }
 
 body {
-  font-size: 16px;
+  font-size: 18px;
 }
 
 
@@ -44,54 +44,52 @@ body > header > div > div > div > div > h1 {
   color: #333333;
 }
 
-
-/*
-#nathalie-m\.-dumornay-b\.s\.-graduate-student > div:nth-child(3) {
-  padding-bottom: 50px;
+/*main body container*/
+body > div.container-fluid.main-container {
+  max-width: 90%;
 }
 
-.section h2 {
-  padding-top: 3em !important;
-}
-
-.intro-header .site-heading, .intro-header .page-heading {
-    text-align: center;
-}
-*/
-
-/*headshot*/
-
+/*this is the flex container*/
 body > div.container-fluid.main-container > div:nth-child(3) {
   padding-top: 5%;
-  padding-bottom: 5%;
   flex-basis: fit-content;
-  flex-direction: row-reverse;
-}
- 
-body > div.container-fluid.main-container > div:nth-child(3) > div:nth-child(1) > p > img {
-    display: block;
-    margin-left: auto;
-    margin-right: auto;
 }
 
-/*about me box*/
-
+/*the about me box*/
 #about-me {
-  padding-left: 3%;
-  padding-right: 3%;
+  padding-left: 1%;
+  padding-right: 2%;
+  max-width: 40%;
 }
 #about-me > h3 {
   text-align:center;
-  padding-top: 40%;
   font-family: 'BIZ UDPMincho', serif;
 }
 #about-me > p {
   text-align:center;
 }
 
-body > div.container-fluid.main-container > div:nth-child(4) {
-  display: block;
-  margin-left: auto;
-  margin-right: auto;
-  max-width: 500px;
+/*the image*/
+body > div.container-fluid.main-container > div:nth-child(3) > div:nth-child(2) > p > img {
+    display: block;
+    flex-basis: fit-content;
+    flex-wrap: wrap;
+    margin-right: auto;
 }
+
+/*the twitter timeline*/
+body > div.container-fluid.main-container > div:nth-child(3) > div:nth-child(3) {
+    display: block;
+    margin-left: auto;
+    margin-right: auto;
+    flex: none;
+    flex-grow: 0;
+    flex-shrink: 0;
+    flex-basis: auto;
+    max-width: 20%;
+}
+
+
+/*
+  flex-direction: row-reverse;
+*/
