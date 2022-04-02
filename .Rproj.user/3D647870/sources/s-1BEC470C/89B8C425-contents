@@ -1,0 +1,307 @@
+---
+title: "Assignment 5"
+author: "Isabelle Morris, Nathalie Dumornay, Seokyung Kim"
+date: '2022-03-30'
+output:
+  html_document:
+    theme: paper
+    toc: true
+    toc_float:
+        collapsed: false
+    df_print: paged
+    code_folding: hide
+---
+
+#  16.25 / 17
+
+
+
+
+
+```{r knitr_init, include= FALSE, echo=FALSE, message=FALSE}
+library(knitr)
+library(kableExtra)
+library(rmdformats)
+
+## Global options
+options(
+  max.print = "75",
+  scipen = 5
+  )
+
+# knitr document chunk options
+opts_chunk$set(
+  prompt = FALSE,
+  comment = NA,
+  message = FALSE,
+  warning = FALSE,
+  echo = FALSE,
+  tidy = FALSE,
+  fig.width = 6,
+  fig.height = 6,
+  fig.align = 'center',
+  out.width='50%'
+  )
+
+## Set output width for printing
+opts_knit$set(width = 85)
+```
+
+```{r setup, include=FALSE}
+library(tidyverse)
+library(broom)
+library(corrr)
+library(AICcmodavg)
+library(lmtest)
+library(patchwork)
+library(educate)
+library(dplyr)
+library(ggrepel)
+
+# Read in data
+wine = read_csv("https://raw.githubusercontent.com/zief0002/epsy-8252/master/data/wine.csv")
+
+head(wine)
+```
+
+## Model 1: Effect of Wine Rating on Price
+### Question 1
+```{r Figure 1, fig.cap= " **Figure 1.** Scatterplot showing the relationship between wine rating and price."}
+ggplot(data = wine, aes(x = rating, y = price)) +
+  geom_point(color = "darkslategray4") +
+  geom_smooth(color = "thistle4", fill = "honeydew3") +
+  labs(
+      title = "Wine Rating vs. Price",
+      x = "Wine rating on a 100-pt scale",
+      y = "Price in U.S. dollars"
+  ) +
+  theme_bw() +
+  theme(
+    plot.title = element_text(hjust = .5)
+    )
+```
+
+Yes, the plot suggests that the relationship between wine rating and price is non-linear. At the lower wine ratings (~88-92.5) there is very little difference in price. At higher wine ratings (>95) the slope is increasingly steep, suggesting a greater impact of wine rating on price.
+
+##### And the loess smoother suggests that there is a positive, increasing rate-of-change in the effect of rating on price.       (-0.25 pts)
+
+
+
+
+### Question 2
+```{r Model 1, include=FALSE}
+# Create log-transformed price
+wine = wine %>%
+  mutate(
+    Lprice = log(price)
+    )
+
+# View data
+wine
+
+# Fit Model 1
+lm.1 = lm(Lprice ~ 1 + rating, data = wine)
+tidy.1 = tidy(lm.1)
+```
+The slope, $\hat{\beta_1} =$ `r round(tidy.1$estimate[2], 2)`, indicates that each one-point change in wine rating is associated with a 0.24-unit change in log-price, on average. 
+
+### Question 3
+```{r back transform Model 1, include=FALSE}
+exp(coef(lm.1))
+```
+The back-transformed slope, $\hat{\beta_1} =$ 1.28, indicates that each one-point change in wine rating is associated with a 1.28-fold (28%) difference in price, on average.
+
+## Effect of Wine Rating and Region on Log-Transformed Price
+
+### Question 4
+```{r Model 2, include=FALSE}
+# Dummy coding region (France)
+wine <- wine %>% 
+  mutate(
+    france = if_else(region == "France", 1, 0),
+  )
+
+# Fitting Model 2
+lm.2 = lm(Lprice ~ 1 + rating + france, data = wine)
+tidy.2 = tidy(lm.2)
+```
+
+The slope, $\hat{\beta_2} =$ `r round(tidy.2$estimate[3], 2)`, indicates that, on average, wines from France have a log-price that is 0.06-units higher than wines from other regions.
+
+###### after controlling for rating
+
+
+### Question 5
+```{r back transform Model 2, include=FALSE}
+exp(coef(lm.2))
+```
+
+The back-transformed slope, $\hat{\beta_2} =$ 1.06, indicates that wines from France are associated with a 1.06-fold (6%) increase in price, on average, over wines from other regions. 
+
+###### after controlling for rating
+
+
+### Question 6
+```{r LRT, include=FALSE}
+# Fit intercept-only model
+lm.0 <- lm(Lprice ~ 1, data = wine)
+# 
+# #LRT to compare Mpdel 1 (rating) to intercept-only model
+# lrt_1vInt <- lrtest(lm.0, lm.1)
+# 
+# # LRT to compare Model 1 (rating) and Model 2 (rating + france)
+# lrt_1v2 <- lrtest(lm.1, lm.2)
+# 
+# # LRT to compare intercept-only model to france model
+# lm.france <- lm(Lprice ~ 1 + france, data = wine)
+# lrt_france <- lrtest(lm.0, lm.france)
+
+lrt_3 <- lrtest(lm.0, lm.1, lm.2)
+```
+
+```{r Table 1}
+options(knitr.kable.NA = '')
+
+data.frame(
+  term = c("Intercept", "Rating", "France"),
+  estimate = c(-18.92, 0.24, 0.06),
+  SE = c(1.36, 0.01, 0.09),
+  log_lik = c(-227.87, -139.31, -139.09),
+  chisq = c(NA, 177.12,   0.44),
+  p = c(NA, "$<.001$",  0.51)
+) %>%
+  kable(
+    caption = "**Table 1.** Results from a likelihood ratio test (LRT) comparing the partial effects of wine rating and region on wine price",
+    col.names = c("Term", "Estimate", "SE", "Log-likelihood", "*$\\chi^2$*", "*p*"),
+    align = c("l", rep("c", 5)),
+    table.attr = "style='width:80%;'",
+    escape = FALSE
+  )  %>%
+kable_classic()
+```
+<br />
+Based on the results of the likelihood ratio tests, the partial effect of rating is significant but the partial effect of region (whether the wine is from France or not) is not. Therefore, we should adopt the simpler model, Model 1.
+
+### Question 7
+```{r Model 3, include=FALSE}
+# Fit Model 3
+lm.3 = lm(Lprice ~ 1 + rating + france + rating:france, data = wine)
+tidy.3 = tidy(lm.3)
+
+# LRT to compare Model 2 and Model 3
+lrt.2v3 <- lrtest(lm.2, lm.3)
+```
+
+Based on the likelihood ratio test comparing Model 2 to Model 3, the interaction effect between rating and region is not significant ($\chi^2(1) = 0.54; p = .46$). We would therefore adopt the simpler model, Model 2.
+
+## Adopting a "Final" Candidate Model
+
+### Question 8
+```{r, include=FALSE}
+lrtest(lm.1, lm.2, lm.3)
+```
+
+We would adopt Model 1 as the final model.
+$$ \ln\left(\hat{\mathrm{Price}_i}\right) = -19.06 + 0.24(\mathrm{Rating}_i)$$
+
+### Question 9
+```{r Figure 2, fig.width=8, fig.height=4, out.width="80%", fig.cap="**Figure 2.** Density plot of the standardized residuals (left) and scatterplot of the standarized residuals versus the fitted values (right) from regressing price on wine rating. The confidence envelope from assuming a normal distribution is also displayed along with the density plot. In the scatterplot, the loess smoother (solid, purple) is displayed along with the 95% confidence envelope (green shaded area) and the reference line of Y=0."}
+
+# Obtain residuals and fitted values
+out.1 = augment(lm.1)
+
+# Density plot of the residuals
+p1 = ggplot(data = out.1, aes(x = .std.resid)) +
+  stat_density_confidence(model = "normal", fill = "honeydew3") +
+  stat_density(geom = "line", color = "thistle4", size = 1) +
+  theme_bw() +
+  labs(
+    x = "Standardized residuals",
+    y = "Probability density"
+  )
+
+# Residuals versus fitted values
+p2 = ggplot(data = out.1, aes(x = .fitted, y = .std.resid)) +
+  geom_point(color = "darkslategray4") +
+  geom_hline(yintercept = 0) +
+  geom_smooth(color = "thistle4", fill = "honeydew3") +
+  theme_bw() +
+  xlab("Fitted values") +
+  ylab("Standardized residuals")
+
+# Plot the figures side-by-side
+p1 | p2
+```
+
+<br />
+Based on the plots, we see that all of the model assumptions are satisfied. The normality assumption is tenable as the line falls within the confidence envelope for the normal distribution (left plot). Further, the errors have constant variance and the assumption that the average residual is zero at each fitted value also seems tenable.
+
+##### You only talked about normality assumption and linearity assumption. What about homoskedasticity assumption and independence assumption?   (-0.5 pts)
+
+
+
+
+## Presenting the Results
+
+### Question 10
+<!-- $$ \ln\left(\hat{\mathrm{Price}_i}\right) = -19.06 + 0.24(\mathrm{Rating}_i)$$ -->
+
+<!-- Back-transformed -->
+<!-- $$\hat{\mathrm{Price}_i} = e^{-19.06} \times e^{.24(\mathrm{Rating}_i)}$$ -->
+
+```{r Figure 3, fig.cap='**Figure 3.** Plot of predicted price as a function of wine rating.'}
+# Plot
+ggplot(data = wine, aes(x = rating, y = price)) +
+  geom_point(alpha = 0) +
+  geom_function(fun = function(x) {exp(-19.06) * exp(0.24*x)}, color = "thistle4", size = 1) +
+  theme_bw() +
+  labs(
+    x = "Wine Rating on 100-Point Scale",
+    y = "Predicted price (in USD)",
+    title = "Wine Rating vs. Predicted Price"
+  ) +
+  theme(
+    plot.title = element_text(hjust = .5)
+  )
+```
+
+### Question 11
+This plot shows an exponential growth relationship between wine rating and predicted price. At lower ratings, increases in rating only result in modest increases in predicted price. However, at higher ratings, the relationship between rating and predicted price is much stronger such that even small increases in rating result in large increases in predicted price.
+
+### Question 12
+```{r Question 12, include = FALSE}
+# Adding wine names to the residuals data
+out.1 <- out.1 %>% 
+  mutate(
+    wine
+  )
+
+head(out.1)
+
+out.1 <- out.1 %>% 
+  mutate(
+    label = ifelse(wine != "Rochioli Chardonnay", "", "Rochioli Chardonnay")
+  )
+```
+
+```{r Figure 4, fig.cap="**Figure 4**. Plot of fitted values vs. standardized residuals."}
+# Recreating residual plots with wine names
+ggplot(data = out.1, aes(x = .fitted, y = .std.resid, label = label)) +
+  geom_point(color = 
+               ifelse(out.1$label == "",  "darkslategray4", "palevioletred4")
+            ) +
+  geom_text_repel() +
+  geom_hline(yintercept = 0) +
+  geom_smooth(color = "thistle4", fill = "honeydew3") +
+  theme_bw() +
+  xlab("Fitted values") +
+  ylab("Standardized residuals")
+```
+
+##### Where are the team labels?
+
+
+<br />
+
+### Question 13
+Rochioli Chardonnay is a bad value relative to other hypothetical wines that have the same fitted value. The standardized residual of zero represents the average (predicted) price for all wines with the same rating. Rochioli Chardonnay's standardized residual of nearly 2 indicates that it is a much more expensive wine than expected based on its rating.  (i.e, 0/10, not a good buy)

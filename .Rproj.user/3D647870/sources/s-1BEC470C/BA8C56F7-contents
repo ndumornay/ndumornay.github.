@@ -1,0 +1,340 @@
+---
+title: "Assignment 04"
+subtitle: "Polynomial Effects"
+author: "Nathalie Dumornay, Seokyung Kim, Isabelle Morris"
+date: "3/24/2022"
+output:
+  html_document:
+    toc: true
+    toc_float:
+      collapsed: true
+    df_print: paged
+    fig_width: 6
+    fig_height: 6
+    fig_caption: true
+    highlight: zenburn
+---
+
+```{r, include=FALSE}
+knitr::opts_chunk$set(warning=FALSE, message=FALSE, echo=FALSE, fig.align = 'center', out.width = '50%')
+
+library(AICcmodavg)
+library(lmtest)
+library(tidyverse)
+library(knitr)
+library(broom)
+library(corrr)
+library(educate)
+library(kableExtra)
+library(patchwork)
+library(texreg)
+```
+
+```{r read data, include=FALSE}
+fert = read.csv("https://raw.githubusercontent.com/zief0002/epsy-8252/master/data/fertility.csv")
+fert
+```
+
+## Model 1: Linear Effect of Female Education Level
+
+### Question 1 
+<!-- Create a scatterplot showing the relationship between female education level and infant mortality rates. -->
+
+```{r q1, fig.cap="Scatterplot showing the relationship between female education level and infant mortality rates."}
+ggplot(data = fert, aes(x = educ_female, y = infant_mortality)) +
+  geom_point(size = 2, color = "black") +
+  geom_smooth(method = "loess", se = FALSE, color = "honeydew3") +
+  theme_light() +
+  xlab("Average number of years of formal education (schooling) for females") +
+  ylab("Infant mortality rate")
+```
+
+### Question 2
+<!-- Describe the relationship between female education level and infant mortality rates. Be sure to comment on the structural form, direction and strength of the relationship. Also comment on any potential observations that deviate from following this relationship (unusual observations or clusters of observations). -->
+
+There is a negative, non-linear/monotonic relationship between female education level and infant mortality rates. Specifically, the relationship appears to be one of exponential decay. Given the steepness of the curve, the relationship seems to be moderate to strong, with a steeper slope for countries with less female education (say female education <7.5 years) and a less steep slope for countries with more female education (≥7.5 years). There is also more variability in infant mortality rate at low levels of education than at high levels of education. It's possible that a few very high infant mortality rates at the low end of education are pulling the line upwards, giving the appearance of a non-linear relationship where it might actually be linear.
+
+ 
+
+### Question 3
+<!-- Compute and report the Pearson correlation coefficient between female education level and infant mortality rate. Based on your response to Question 2, explain whether the Pearson correlation coefficient is an appropriate summary measure of the relationship.  -->
+```{r q3, include=FALSE}
+fert %>%
+  select(educ_female, infant_mortality) %>%
+  correlate()
+```
+The correlation between infant mortality and female education is -0.78. This Pearson correlation coefficient seems appropriate because it indicates that there is a strong, negative correlation between these two variables. However, because Pearson correlations tell you about the strength and direction of *linear* relationships, if the relationship between these two variables is in fact, non-linear, this coefficient is not appropriate.
+
+
+### Question 4
+<!-- Regress infant mortality rates on female education level. For this model, posit a linear effect of female education level on infant mortality rate (Model 1). Create the scatterplot of the standardized residuals versus the fitted values from Model 1. -->
+
+```{r q4, fig.cap="Scatterplot of the standardized residuals versus the fitted values from a model regressing infant mortality rates on female education level (Model 1)."}
+lm.1 = lm(infant_mortality ~ 1 + educ_female, data = fert)
+
+# Obtain residuals
+out.1 = augment(lm.1)
+
+# Examine residuals for linearity
+ggplot(data = out.1, aes(x = .fitted, y = .std.resid)) +
+  geom_point(size = 2) +
+  geom_hline(yintercept = 0) +
+  geom_smooth(color = "thistle4") +
+  theme_light() +
+  xlab("Fitted values") +
+  ylab("Standardized residuals")
+
+```
+
+### Question 5
+<!-- Does this plot suggest problems about meeting the assumption that the average residual is zero at each fitted value? Explain. -->
+
+Yes, there are violations of the assumption that the average residual is zero in the middle and at the far right side of the plot where the confidence envelope does not include the y=0 line.
+
+<br />
+
+## Model 2: Quadratic Effect of Female Education Level
+
+### Question 6
+<!-- Regress infant mortality rates on female education level. For this model, posit a quadratic effect of female education level on infant mortality rate (Model 2). Write the *fitted equation* using Equation Editor (or some other program that correctly types mathematical expressions). -->
+
+```{r q5, include=FALSE}
+lm.2 = lm(infant_mortality ~ 1 + educ_female + I(educ_female ^ 2), data = fert)
+
+tidy(lm.2)
+```
+
+$$\hat{Infant\ Mortality}_i = 81.10 -10.85(Female\ Education_i) + 0.39(Female\ Education_i^2)$$
+
+### Question 7
+<!-- Compute, report, and interpret the likelihood ratio between Model 2 and Model 1. -->
+```{r q7}
+# Compute LR
+lr = exp(logLik(lm.2)[1] - logLik(lm.1)[1])
+```
+
+The likelihood ratio between Model 2 and Model 1 is `r round(lr, digits = 2)` meaning there is 157x more empirical support for Model 2 than Model 1.
+
+### Question 8
+<!-- Carry out a likelihood ratio test to compare Model 1 and Model 2. Report the results from this test in a nicely formatted table. -->
+
+```{r q8}
+options(knitr.kable.NA = '')
+
+# Likelihood ratio test to compare linear and quadratic models
+lrt = lrtest(lm.1, lm.2)
+ 
+# tab_01 = lrt %>%
+#   data.frame()
+# 
+# rownames(tab_01) <- c("Model 1", "Model 2")
+# 
+# tab_01 %>%
+#   kable(
+#     format = "html",
+#     booktabs = TRUE,
+#     escape = FALSE,
+#     col.names = c("K", "Log-likelihood", "*df*", "Chi Squared", "*p*"),
+#     caption = "Likelihood ratio test comparing linear (Model 1) and quadratic (Model 2) models examining the effect of female education level on infant mortality rates.",
+#     digits = 3,
+#     align = c("l", rep("c", 5)),
+#     table.attr = "style='width:50%;'"
+#   ) %>%
+#   kable_classic()
+
+data.frame(
+  model = c("Model 1", "Model 2"),
+  df = c(3, 4),
+  log_lik = c(-511.70, -506.65),
+  lr = c(NA, 156.83),
+  lr_test = c(NA, "$\\chi^2(1)=10.11$, $p=.001$")
+) %>%
+  kable(
+    caption = "Results from a likelihood ratio test (LRT) comparing linear (Model 1) and quadratic (Model 2) models examining the effect of female education level on infant mortality rates.",
+    col.names = c("Model", "*df*", "Log-likelihood", "*LR*", "*LRT*"),
+    align = c("l", rep("c", 4)),
+    table.attr = "style='width:80%;'",
+    escape = FALSE
+  )  %>%
+  kable_styling()
+```
+
+
+<br />
+
+## Model 3: Control for Differences in Gross National Income (GNI)
+
+### Question 9
+<!-- Regress infant mortality rates on female education level. For this model, posit a quadratic effect of female education level on infant mortality rate, and also control for differences in Gross National Income (Model 3). (Use all four levels of GNI.) Write the *fitted equation* using Equation Editor (or some other program that correctly types mathematical expressions). -->
+
+```{r q9, include=FALSE}
+# Create dummy variables for GNI
+fert = fert %>%
+  mutate(
+    low = if_else(gni_class == "Low", 1, 0),
+    low_mid = if_else(gni_class == "Low/Middle", 1, 0),
+    upper = if_else(gni_class == "Upper", 1, 0),
+    upper_mid = if_else(gni_class == "Upper/Middle", 1, 0),
+  )
+
+#upper is reference group
+lm.3 = lm(infant_mortality ~ 1 + educ_female + I(educ_female ^ 2) + low + low_mid + upper_mid, data = fert)
+
+tidy(lm.3)
+```
+\begin{align} 
+\hat{Infant\ Mortality}_i =\ &41.65 -6.84(Female\ Education_i) + 0.32(Female\ Education_i^2) + 33.37(Low\ GNI_i) \\
+&+ 23.46(Low/Middle\ GNI_i) + 8.80(Upper/Middle\ GNI_i)
+\end{align}
+
+
+### Question 10
+<!-- Carry out a likelihood ratio test to compare Model 2 and Model 3. Add the results from this test to the table you created in Question \#8. -->
+
+```{r q10.1, include=FALSE}
+# Compute LR
+exp(logLik(lm.3)[1] - logLik(lm.2)[1])
+lrtest(lm.2, lm.3)
+```
+```{r q10.2}
+options(knitr.kable.NA = '')
+
+data.frame(
+  model = c("Model 1", "Model 2", "Model 3"),
+  df = c(3, 4, 7),
+  log_lik = c(-511.70, -506.65, -492.38),
+  lr = c(NA, 156.83, 1564064),
+  lr_test = c(NA, "$\\chi^2(1)=10.11$, $p=.001$", "$\\chi^2(3)=28.53$, $p< .001$")
+) %>%
+  kable(
+    caption = "Results from a set of likelihood ratio tests (LRT) to compare a set of nested candidate models.",
+    col.names = c("Model", "*df*", "Log-likelihood", "*LR*", "*LRT*"),
+    align = c("l", rep("c", 5)),
+    table.attr = "style='width:80%;'",
+    escape = FALSE
+  )  %>%
+  kable_styling()
+```
+
+
+<br />
+
+## Adopting a Model
+
+### Question 11
+<!-- Based on the results of the two likelihood ratio tests, which model will you adopt? Explain. -->
+
+The model with the most empirical support is Model 3, which is over a million times more likely than Model 2 (which is 157 times more likely than Model 1). Further, the *p*-value for the difference in deviance (chi-squared) test for Model 2 versus Model 3 is < 0.001. Based on this, we should reject the null hypothesis that the difference in empirical support for the models is within what we would expect due to sampling variability (i.e., that the difference in deviance is zero). Because the models don't have an equal fit, we should adopt Model 3.
+
+### Question 12
+<!-- Create the density plot of the marginal distribution of the standardized residuals for your adopted model, as well as the scatterplot of the standardized residuals versus the fitted values. Place these plots side-by-side in your printed document and, for the purposes of captioning, etc. treat them as two subfigures within a single figure. -->
+
+```{r q12, fig.cap="Residual plots for the quadratic model regressing infant mortality rates on female education level, controlling for differences in Gross National Income. LEFT: Density plot of the standardized residuals. The confidence envelope for a normal reference distribution (green shaded area) is also displayed. RIGHT: Standardized residuals versus the fitted values. The line $Y=0$ (black) and the loess smoother (green) are also displayed.", fig.width=8, fig.height=4, out.width='80%'}
+# Obtain residuals
+out_3 = augment(lm.3)
+
+# Examine residuals for normality (linear)
+p1 = ggplot(data = out_3, aes(x = .std.resid)) +
+  stat_density_confidence(fill = "honeydew3") +
+  stat_density(geom = "line") +
+  theme_light() +
+  xlab("Standardized residuals") +
+  ylab("Probability density")
+
+# Examine residuals for linearity
+p2 = ggplot(data = out_3, aes(x = .fitted, y = .std.resid)) +
+  geom_point(size = 2) +
+  geom_hline(yintercept = 0) +
+  geom_smooth(color = "darkseagreen3") +
+  theme_light() +
+  xlab("Fitted values") +
+  ylab("Standardized residuals")
+
+# Display plots side-by-side
+p1 | p2
+```
+
+
+### Question 13
+<!-- Based on the plots you created in Question 12, evaluate and comment on the tenability of each of the model assumptions.  -->
+
+Based on the plots, we see that the normality assumption is violated as the line falls outside of the confidence envelope for the normal distribution (left plot). Further, the errors don't seem to have constant variance - the residuals for low fitted values are tightly clustered around 0, but the residuals fan out and show more variance as fitted values increase (right plot). However, the assumption that the average residual is zero at each fitted value is tenable.
+
+<br />
+
+## Presenting the Results
+
+### Question 14
+<!-- Mimic the format and structure of either of the first two tables in the *Presenting Results from Many Fitted Regression Models* section of the document [Creating Tables to Present Statistical Results](https://zief0002.github.io/musings/creating-tables-to-present-statistical-results.html) to create a table to present the numerical information from the three models you fitted in this assignment. Make sure the table you create also has an appropriate caption. If the table is too wide, change the page orientation in your word processing program to "Landscape", rather than changing the size of the font. (Note: Only this table should be presented in landscape orientation...not your entire assignment!) -->
+
+```{r q14, results='asis'}
+htmlreg(
+  l = list(lm.1, lm.2, lm.3),
+  stars = numeric(0),    #No p-value stars
+  digits = 2,
+  padding = 20,          #Add space around columns (you may need to adjust this via trial-and-error)
+  include.adjrs = FALSE, #Omit Adjusted R^2
+  include.nobs = FALSE,  #Omit sample size
+  include.rmse = TRUE,   #Include RMSE
+  custom.model.names = c("Model 1", "Model 2", "Model 3"), 
+  custom.coef.names = c("Intercept", "Female Education (Linear)", "Female Education (Quadratic)", "Low Gross National Income", "Lower/Middle Gross National Income", "Upper/Middle Gross National Income"),
+  reorder.coef = c(2:6, 1), #Put intercept at bottom of table
+  #custom.gof.rows = list(AICc = c(AICc(lm.1), AICc(lm.2), AICc(lm.3), AICc(lm.4), AICc(lm.5))), # Add AICc values
+  caption = "Coefficients (standard errors) for three candidate models predicting variation in infant mortality rates.",
+  caption.above = TRUE, #Move caption above table
+  inner.rules = 1, #Include line rule before model-level output
+  outer.rules = 1  #Include line rules around table
+)
+```
+
+### Question 15
+<!-- Create a publication quality plot that displays the fitted curves from Model 3. Display four separate lines to show the effect of Gross National Income. The four lines should be displayed using different linetypes or colors (or both) so that they can be easily differentiated in the plot. -->
+
+<!-- low: -->
+<!-- IM = 41.6 -6.8(Female\ Education) + 0.3(Female\ Education^2) + 33.4(Low\ GNI) + 23.5(0) + 8.8(0) -->
+
+<!-- low/middle: -->
+<!-- IM = 41.6 -6.8(Female\ Education) + 0.3(Female\ Education^2) + 33.4(0) + 23.5(Low/Middle\ GNI) + 8.8(0) -->
+
+<!-- upper/middle: -->
+<!-- IM = 41.6 -6.8(Female\ Education) + 0.3(Female\ Education^2) + 33.4(0) + 23.5(0) + 8.8(Upper/Middle\ GNI) -->
+
+<!-- upper: -->
+<!-- IM = 41.6 -6.8(Female\ Education) + 0.3(Female\ Education^2) + 33.4(0) + 23.5(0) + 8.8(0) -->
+
+```{r q15, fig.cap="Infant mortality rate as a function of average number of years of female formal education for low (Mission olive, dotted), low/middle (Kalamata olive, solid), upper/middle (Castelvetrano olive, dashed), and upper (Cerignola olive, dotdash) Gross National Income class countries."}
+ggplot(data = fert, aes(x = educ_female, y = infant_mortality)) +
+  geom_point(alpha = 0) +
+  # low GNI
+  geom_function(
+    fun = function(x) {75 - 6.84*x + 0.32 * x^2},
+    color = "#1A1417",
+    linetype = "dotted",
+    size = 1
+  ) +
+  # lower/middle GNI
+  geom_function( 
+    fun = function(x) {65.1 - 6.84*x + 0.32 * x^2},
+    color = "#845D65",
+    linetype = "solid",
+    size = 1
+  ) +
+    # upper/middle GNI
+  geom_function(
+    fun = function(x) {50.4 - 6.84*x + 0.32 * x^2},
+    color = "#405117",
+    linetype = "dashed",
+    size = 1
+  ) +
+    # upper GNI
+  geom_function(
+    fun = function(x) {41.6 - 6.84*x + 0.32 * x^2},
+    color = "#AD902E",
+    linetype = "dotdash",
+    size = 1
+  ) +
+  theme_light() +
+  xlab("Average number of years of formal education for females") +
+  ylab("Infant mortality rate")
+```
+

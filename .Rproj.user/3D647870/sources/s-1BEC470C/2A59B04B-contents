@@ -1,0 +1,127 @@
+---
+title: "Assignment-01"
+author: "Nat"
+date: "1/27/2022"
+output:
+  html_document:
+    df_print: paged
+    fig_width: 6
+    fig_height: 6
+    fig_caption: true
+---
+
+### Question 1.
+Import the data and display the first several rows of data (not all of it). Use one of the paged table options in your YAML to ensure that this is printed nicely. All syntax for these commands should be displayed, as should the output.
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(warning=FALSE, message=FALSE, echo=FALSE)
+  
+library(tidyverse)
+library(knitr)
+library(broom)
+#library(kableExtra)
+```
+
+```{r read, echo=TRUE}
+#reading in the data
+fertility = read_csv(file = "https://raw.githubusercontent.com/zief0002/epsy-8252/master/data/fertility.csv")
+fertility
+```
+
+### Question 2.
+Create a well-formatted table that includes the mean infant mortality rate and the standard deviation of infant mortality rates for each region represented in the data. Display these in a summary table. All numerical output should be rounded to two decimal places. Also add an appropriate caption (the caption does not have to follow APA formatting). Do not display any syntax.
+
+```{r q2}
+kable(fertility %>%
+  group_by(region) %>% 
+    summarise(
+      round(mean(infant_mortality), 2),
+      round(sd(infant_mortality), 2)
+    ), 
+  col.names = c('Region', 'M', 'SD'), 
+  caption = "*Summary (mean and standard deviations) of infant mortality rates by region.*",
+  align = c("l", "c", "c")
+  )
+```
+
+### Question 3.
+Recode the `gni_class` variable by creating a dummy variable called `high_gni`. In this dummy variable recode the two categories "Upper/Middle" and "Upper" to be 1, and recode "Low/Middle" and "Low" to be 0. Use the `lm()` function to fit a main effects linear model regressing infant mortality on your dummy variable and female education level. Use the `tidy()` function from the *broom* package to display the model's coefficient-level output. (Reminder: Do not display any syntax, only the model's coefficient-level output.)
+
+```{r q3}
+fertility = fertility %>%
+  mutate(
+    high_gni = case_when(
+      gni_class == "Upper" ~ 1,
+      gni_class == "Upper/Middle" ~ 1,
+      gni_class == "Low" ~ 0,
+      gni_class == "Low/Middle" ~ 0  
+    )
+  )
+
+lm.a = lm(infant_mortality ~ 1 + high_gni + educ_female, data = fertility)
+
+tidy(lm.a)
+```
+
+
+## Question 4.
+Use a bulleted list to provide an interpretation of each estimated regression coefficient (including the intercept) from the regression you fitted in Question 3; one interpretation per list item.
+
+* The intercept coefficient for the model is 63.37. This value is the average infant mortality rate when female education level is zero and when the gross national income class is "low" or "low/middle".
+* The estimated regression coefficient for `high_gni`is -17.58. This value is the average change in mean infant mortality rate associated with a 1-unit change in `high_gni`, controlling for differences in female education level. In other words, upper & upper/middle class countries have an average infant mortality rate that is 17.58 units lower than low & low/middle class countries, controlling for differences in female education level.
+* The estimated regression coefficient for `educ_female` is -3.60. This value indicated that each additional year in average female education is associated with a 3.60-unit decrease in infant mortality, controlling for differences in gross national income class.
+
+## Question 5.
+Create a well-formatted table of the model's coefficient `tidy()` output (e.g., using the `kable()` function from the *knitr* package). In the final outputted table, the five column names should be "Predictor", "B", "SE", "t", and "p", respectively. All numerical output should be rounded to two decimal places, except the *p*-values, which should be rounded to three decimal places. Also add a caption. **(2pts.)**
+
+```{r q5}
+#come back and figure out how to references a column in a tibble
+kable(tidy(lm.a), col.names = c('Predictor', 'B', 'SE', 't', 'p'), caption = "Summary of the estimated effects of gross national income class and female education levels on infant mortality rates.")
+```
+
+
+## Question 6.
+Create a publication quality plot that displays the results from the fitted model. For this plot, put the female education level predictor on the *x*-axis. Display a separate line for each level of the dummy-coded GNI variable. The two lines should be displayed using different linetypes or colors (or both) so that they can be easily differentiated in the plot. Be sure that the figure includes a caption using the `fig.cap` option in the code chunk. The plot should be centered on the page. Adjust the aspect ratio of the plot using `fig.width` and `fig.height` in the code chunk so that it looks good. Lastly, change the values of the output width/height (`out.width`, `out.height`) to change the size of the plot from the default values. **(2pts.)**
+
+```{r q6, fig.cap="caption placeholer", out.width="50%"}
+ggplot(data = fertility, aes(x = educ_female, y = infant_mortality)) +
+  geom_point(alpha = 0) +
+  geom_abline(intercept = 63.37096, slope = -3.60, color = "#f26419", linetype = "solid") + #low gni
+  geom_abline(intercept = 45.787753, slope = -3.60, color = "#022f40", linetype = "dashed") + #high gni
+  theme_bw() +
+  xlab("Female Education") +
+  ylab("Infant Mortality")
+  #ggtitle("")
+```
+
+
+## Question 7.
+Use a display equation to write the equation for the underlying *regression model* (including error and assumptions) using Greek letters, subscripts, and variable names. Also write the equation for the *fitted least squares regression equation* based on the output from `lm()`. Type these two equations in the same display equation, each on a separate line of text in your document, and align the equals signs. (Hint: Google "aligning math latex".) **(2pts.)**
+
+$${Infant\ Mortality_i} = \beta + \beta_1(GNI_i) + \beta_2(Female\ Education_i) + \epsilon$$
+$$\hat{Infant\ Mortality_i} = 63.37 - 17.58(GNI_i) - 3.60(Female\ Education_i)$$
+
+## Question 8.
+Write the following sentence: "The estimated partial regression coefficient ($\beta_\mathrm{Female~Education}$) is $x$." In this sentence, use an inline code chunk to replace $x$ with the value for the fitted coefficient from the fitted equation. In this code chunk, do not just write in the value for the coefficient, but use syntax to extract the value from the `tidy()` output. (Hint: Google "R extract element from dataframe".) **(2pts.)**
+
+The estimated partial regression coefficient ($\beta_\mathrm{Female~Education}$) is `r round(tidy(lm.a)$estimate[3], 2)`.
+
+## Question 9.
+Compute the sum of squared residuals for the fitted regression. Although you can use the `anova()` function to check your work, compute this value by actually using R syntax to carry out the computation, $\sum(y_i - \hat{y}_i)^2$. Show the syntax you used in your document.
+
+```{r q9}
+#Compute the sum of the squared residuals
+fertility %>%
+  mutate(
+    y_hat = 63.370963 + -17.583207*high_gni + -3.599037*educ_female,
+    errors = infant_mortality - y_hat,
+    sq_errors = errors ^ 2
+  ) %>%
+  summarize( #summarize takes all the rows and compresses it into one number
+    SSE = sum(sq_errors)
+  )
+```
+
+
+## Question 10.
+Write a sentence that includes two references in an inline citation. This should also generate the actual references when you knit your document. One of the two references should be the Fox textbook. The other should be a journal article of your choice. You can choose the topic of the sentence and how the two references are used in the citation. (Note the references do not actually have to pertain to what is written in the sentence. This is just an exercise in using the bibliography tools in Markdown.) The two references can be included in the document's YAML (be careful of the indentation) *or* drawn from an external BIB file. Specify an appropriate CSL file so that the references and citations are in APA format. (If you want to use a citation style that is different from APA, say for a specific journal, use the appropriate CSL file, and indicate that on the assignment.) **(2pts.)**

@@ -1,0 +1,11 @@
+
+
+## CV
+
+Click [here](dumornay_CV.pdf) to download (last updated April 2022).
+
+```{r cv, message=FALSE, warning=FALSE, echo=FALSE, out.width = "85%", out.height= "800px"}
+library(knitr)
+
+include_graphics("dumornay_CV.pdf")
+```

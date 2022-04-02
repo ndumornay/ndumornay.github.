@@ -2,5 +2,21 @@ name: "personal-website"
 navbar:
   title: "Nathalie M. Dumornay"
   left:
-    - text: "Home"
+    - text: "home"
+      # icon: fa-home
       href: index.html
+    - text: "research"
+      href: research.html
+    - text: "cv"
+      href: cv.html
+  right:
+    - text: "contact me"
+      icon: fa-envelope
+      href: "mailto:dumor003@umn.edu"
+output:
+  html_document:
+    includes:
+      in_header: favicon.html
+    theme: paper
+    css: ['style.css']
+

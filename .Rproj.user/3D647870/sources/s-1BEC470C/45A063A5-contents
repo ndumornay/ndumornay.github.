@@ -1,0 +1,166 @@
+---
+title: "Assignment-02"
+author: "Nathalie Dumornay, Seokyung Kim, Isabelle Morris"
+date: "2/14/2022"
+output:
+  html_document:
+    toc: true
+    toc_float:
+      collapsed: true
+    df_print: paged
+    fig_width: 6
+    fig_height: 6
+    fig_caption: true
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(warning=FALSE, message=FALSE, echo=FALSE, fig.align = 'center', out.width = '50%')
+
+library(tidyverse)
+library(knitr)
+library(broom)
+library(educate)
+library(kableExtra)
+```
+```{r load data, include=FALSE}
+evals = read.csv("https://raw.githubusercontent.com/zief0002/epsy-8252/master/data/evaluations.csv")
+evals
+```
+## Part I: Model-Level Inference
+
+<!-- Fit a regression model that uses professor’s beauty rating, professor’s age, and professor’s sex to explain variation in course ratings. Do not trim this model; leave all predictors in the model whether they are statistically significant or not. -->
+
+```{r part 1, include=FALSE}
+lm.a = lm(avg_eval ~ 1 + beauty + age + female, data = evals)
+
+glance(lm.a)
+tidy(lm.a)
+```
+
+
+### Question 1
+<!-- Write the equations (using mathematical notation) to compute the sum of squared model and sum of squared error in a single equation environment. Each equation should be on a separate line in the environment. -->
+
+\begin{align}
+SS_{Model} &= \sum_{i=1}^n(\hat{y_i} - \bar{y_i})^2 \\
+SS_{Error} &= \sum_{i=1}^n(y_i - \hat{y_i})^2
+\end{align}
+
+### Question 2
+<!-- Use the partitioning from Question #1 to compute the mean squares for the model and error. Show the syntax you used to compute these values along with your output. Indicate which mean square is being computed by commenting the syntax. -->
+
+```{r q2, echo=TRUE}
+#mean square for the model
+model = evals %>%
+  summarize(
+    SSM = sum(((4.001610e+00 + 1.338441e-01 * beauty + 8.184673e-05 * age + -2.339800e-01 * female) - mean(avg_eval)) ^ 2),
+    MSM = SSM/3
+  )
+model$MSM
+
+#mean square for the error
+error = evals %>%
+  summarize(
+    SSE = sum((avg_eval - (4.001610e+00 + 1.338441e-01 * beauty + 8.184673e-05 * age + -2.339800e-01 * female)) ^ 2),
+    MSE = SSE/90
+  )
+error$MSE
+```
+
+### Question 3
+<!-- Compute the observed F-statistic. Use an inline code chunk to present this in a sentence; “The observed F-statistic is [insert R chunk]” -->
+<!-- $F = \frac{MS_{model}}{MS_{error}}$ -->
+
+The observed F-statistic is `r round(model$MS[1]/error$MS[1], digits = 2)`.
+
+### Question 4
+<!-- Use the cumulative density functionality in R to find the p-value to test the null hypothesis H0:ρ2=0 using the observed F-value you computed in Question #3. Show your syntax and output. -->
+
+```{r q4, echo=TRUE}
+1 - pf(3.349692, df1 = 3, df2 = 90)
+```
+
+
+### Question 5
+<!-- Create an ANOVA table that gives the model and error partitioning for the sum of squares and degrees of freedom. Also include the mean squares, the F-statistic and the p-value. Use kable() to make this table look good. The formatting of this table will look similar to the output from the anova() function, except the partitioning will only be between model and error. (Hint: Try the tidy_anova() function from the {educate} package with the argument model=TRUE.) -->
+
+```{r q5}
+tab_01 <- tidy_anova(lm.a, model=TRUE)
+
+tab_01 %>%
+  kable(
+    format = "html",
+    col.names = c('Predictor', '*df*', 'Sum of Squares', 'Mean Squares', '*F*', '*p*'), 
+    caption = "**Table 1** <br /> *Analysis of Variance*",
+    digits = c(NA, 2, 2, 2, 2, 3),
+    table.attr = "style='width:60%;'") %>%
+    kable_classic(html_font = "\"Helvetica Neue\"")
+```
+
+## Part II: Coefficient-Level Inference
+<!-- For all of the questions in Part II, use the partial effect of age from the fitted model. -->
+
+### Question 6
+<!-- Compute the observed t-statistic associated with the partial effect of age. Show your work via syntax. -->
+<!-- $$t_{age} = \frac{\hat{\beta}_{age}}{SE(\hat{\beta}_{age})}$$ -->
+
+```{r q6, echo=TRUE}
+tidy(lm.a)$estimate[3]/tidy(lm.a)$std.error[3]
+```
+
+### Question 7
+<!-- Use the cumulative density function to find the p-value to test the hypothesis that H0:βAge=0 using the observed t-value you computed in Question #6. Show your work/syntax. -->
+
+```{r q7, echo=TRUE}
+pt(-0.01683468, df = 90)*2
+```
+
+### Question 8
+<!-- Create a plot of the probability density function of the t-distribution you used in Question #7. Also shade the cumulative density associated with the p-value under this distribution. (Hint: This should look similar to Figure 4.3 in the Probability Distributions unit notes.) Only show the plot; do not show the syntax used to create it. (2pts.) -->
+
+```{r q8, fig.cap="Plot of the probability density function (PDF) for the *t*-distribution (*df* = 90). The cumulative density representing the *p*-value for a two-tailed test evaluating whether $\\beta_{age}=0$ using *t*-value of 0.017 is also displayed."}
+# Create data and calculate probability densities
+fig_01 = data.frame(
+  X = seq(from = -4, to = 4, by = 0.01)
+  ) %>% 
+  mutate(
+    Y = dt(x = X, df = 90)
+    )
+
+# Filter data for shading
+shade_01 = fig_01 %>%
+  filter(X >= 0.01683468)
+
+shade_02 = fig_01 %>%
+  filter(X <= -0.01683468)
+
+# Create plot
+ggplot(data = fig_01, aes(x = X, y = Y)) +
+  geom_ribbon(data = shade_01, ymin = -10, aes(ymax = Y), fill = "cadetblue", alpha = 0.8) +
+  geom_ribbon(data = shade_02, ymin = -10, aes(ymax = Y), fill = "cadetblue", alpha = 0.8) +
+  geom_line(color = "darkslategray") +
+  xlab("t") +
+  ylab("Probability density") +
+  theme_light()
+```
+
+
+### Question 9
+<!-- Compute the t∗ value that would be used to compute the 99% confidence interval for the effect of age. Show your work. -->
+
+```{r q9, echo=TRUE}
+tstar = 1 - (.01/2)
+tstar
+```
+
+### Question 10
+<!-- Use the value you computed in Question #9 to compute the 99% confidence interval for the effect of age. Show your work. -->
+
+```{r q10, echo=TRUE}
+# 99% CI = estimate for age + or - quantile*SE of age
+quantile = qt(p = tstar, df = 90)
+
+lowerCI = tidy(lm.a)$estimate[3] - quantile*tidy(lm.a)$std.error[3]
+upperCI = tidy(lm.a)$estimate[3] + quantile*tidy(lm.a)$std.error[3]
+```
+The 99% CI is [`r round(lowerCI, 3)`, `r round(upperCI, 3)`].
