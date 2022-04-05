@@ -1,0 +1,4 @@
+"0","# Fit models from previous notes"
+"0","glm.0 = glm(got_degree ~ 1, data = grad, family = binomial(link = ""logit""))"
+"0","glm.1 = glm(got_degree ~ 1 + act, data = grad, family = binomial(link = ""logit""))"
+"0","glm.2 = glm(got_degree ~ 1 + is_firstgen, data = grad, family = binomial(link = ""logit""))"
